@@ -159,4 +159,75 @@ namespace BingoMode.BingoChallenges
             return new(ChallengeUtils.ItemOrCreatureIconName(name), scale, color, rotation);
         }
     }
+
+    public class CompoundIcon : Word
+    {
+        public CompoundIcon(IList<Icon> elements)
+        {
+            const float SPACING = 15f;
+
+            List<FNode> nodes = [];
+            if (elements.Count >= 1)
+            {
+                nodes.Add(elements[0].display);
+            }
+            
+            if (elements.Count >= 2)
+            {
+                nodes[0].x -= SPACING / 2f;
+                nodes.Add(elements[1].display);
+                nodes[1].x += SPACING / 2f;
+            }
+
+            if (elements.Count >= 3)
+            {
+                nodes[0].y -= SPACING / 3f;
+                nodes[1].y -= SPACING / 3f;
+                nodes.Add(elements[2].display);
+                nodes[2].y += SPACING / 2f;
+            }
+            nodes.Reverse(); // z-indexing shenanigans
+            display = new FNodeCompound();
+            (display as FNodeCompound).subNodes = nodes;
+        }
+
+        public static CompoundIcon FromEntityNameList(IList<string> elements)
+        {
+            Icon[] icons = new Icon[Mathf.Min(elements.Count, 3)];
+            for (int i = 0; i < icons.Length; i++)
+                icons[i] = Icon.FromEntityName(elements[i]);
+            return new(icons);
+        }
+
+        // this class is a bit (very) jank, but it does what I want so I'm not gonna bother making it more generic
+        private class FNodeCompound : FNode
+        {
+            public List<FNode> subNodes = [];
+            private List<Vector2> relPos = [];
+
+            public override void Redraw(bool shouldForceDirty, bool shouldUpdateDepth)
+            {
+                base.Redraw(shouldForceDirty, shouldUpdateDepth);
+                for (int i = 0; i < subNodes.Count; i++)
+                    subNodes[i].SetPosition(relPos[i] + GetPosition());
+            }
+
+            public override void HandleAddedToContainer(FContainer container)
+            {
+                foreach (FNode node in subNodes)
+                {
+                    container.AddChild(node);
+                    relPos.Add(node.GetPosition());
+                }
+                base.HandleAddedToContainer(container);
+            }
+
+            public override void HandleRemovedFromContainer()
+            {
+                foreach (FNode node in subNodes)
+                    container.RemoveChild(node);
+                base.HandleRemovedFromContainer();
+            }
+        }
+    }
 }
