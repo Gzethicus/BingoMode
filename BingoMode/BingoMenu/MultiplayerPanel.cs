@@ -4,6 +4,7 @@ using Expedition;
 using Menu;
 using Menu.Remix;
 using Menu.Remix.MixedUI;
+using Rewired.ControllerExtensions;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -137,7 +138,7 @@ namespace BingoMode.BingoMenu
             if (message == "TOGGLE_FRIENDSONLY")
             {
                 SteamTest.CurrentFilters.friendsOnly = !SteamTest.CurrentFilters.friendsOnly;
-                friendsOnly.menuLabel.text = SteamTest.CurrentFilters.friendsOnly ? "Friends only: Yes" : "Friends only: No";
+                friendsOnly.menuLabel.text = SteamTest.CurrentFilters.friendsOnly ? menu.Translate("Friends only: Yes") : menu.Translate("Friends only: No");
                 return;
             }
 
@@ -265,7 +266,6 @@ namespace BingoMode.BingoMenu
 
             ConstructLobbyHeader();
             CreateLobbyPlayers();
-
         }
 
         public void SwitchToSearch()
@@ -331,7 +331,7 @@ namespace BingoMode.BingoMenu
             refreshSearch = new(
                     menu,
                     this,
-                    "Refresh",
+                    menu.Translate("Refresh"),
                     "REFRESH_SEARCH",
                     new Vector2(size.x - 3f * MARGIN - REFRESH_SEARCH_WIDTH - FRIENDS_WIDTH - SYMBOL_BUTTON_SIZE, smallItemY),
                     new Vector2(REFRESH_SEARCH_WIDTH, TEXT_BUTTON_HEIGHT));
@@ -340,7 +340,7 @@ namespace BingoMode.BingoMenu
             friendsOnly = new(
                     menu,
                     this,
-                    "Friends only: No",
+                    menu.Translate("Friends only: No"),
                     "TOGGLE_FRIENDSONLY",
                     new Vector2(size.x - 2f * MARGIN - FRIENDS_WIDTH - SYMBOL_BUTTON_SIZE, smallItemY),
                     new Vector2(FRIENDS_WIDTH, TEXT_BUTTON_HEIGHT));
@@ -465,6 +465,7 @@ namespace BingoMode.BingoMenu
             BingoData.MultiplayerGame = true;
             List<PlayerData> players = SteamTest.GetPlayersData();
 
+            bool allReady = true;
             // Build the list backwards because z-indexing doesn't exist in these lands. yippee...
             players.Reverse();
             foreach (PlayerData player in players)
@@ -472,6 +473,7 @@ namespace BingoMode.BingoMenu
                 PlayerInfo info = new(menu, this, Vector2.zero, playerSize, isHost, player);
                 lobbyPlayers.Insert(0, info);
                 subObjects.Add(info);
+                allReady &= player.ready || player.isHost;
             }
 
             if (lobbyPlayers.Count == 0)
@@ -488,6 +490,8 @@ namespace BingoMode.BingoMenu
                 lobbyDividers.Add(divider);
                 Container.AddChild(divider);
             }
+            if (isHost)
+                Singal(this, allReady ? "ALL_READY" : "NALL_READY");
         }
 
         private void RemovePlayersSprites()

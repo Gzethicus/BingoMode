@@ -256,7 +256,7 @@ namespace BingoMode.BingoChallenges
             {
                 if (ExpeditionData.challengeList[j] is BingoHellChallenge hell)
                 {
-                    hell.Die();
+                    hell.Fail();
                 }
             }
         }
@@ -269,7 +269,7 @@ namespace BingoMode.BingoChallenges
             {
                 if (ExpeditionData.challengeList[j] is BingoHellChallenge hell)
                 {
-                    hell.Die();
+                    hell.Fail();
                 }
             }
         }
@@ -282,7 +282,7 @@ namespace BingoMode.BingoChallenges
             {
                 if (ExpeditionData.challengeList[j] is BingoHellChallenge hell)
                 {
-                    hell.Die();
+                    hell.Fail();
                 }
             }
         }
@@ -396,7 +396,7 @@ namespace BingoMode.BingoChallenges
                 x => x.MatchLdfld<AbstractSpear>("needle")
                 ))
             {
-                c.Emit(OpCodes.Ldloc, 10);
+                c.Emit(OpCodes.Ldloc, 12);
                 c.EmitDelegate<Func<bool, AbstractSpear, bool>>((orig, spear) =>
                 {
                     if (ExpeditionData.challengeList.Any(x => x is BingoTradeTradedChallenge c && c.traderItems.Keys.Count > 0 && c.traderItems.Keys.Contains(spear.ID)))
@@ -554,7 +554,8 @@ namespace BingoMode.BingoChallenges
                 ))
             {
                 b.Emit(OpCodes.Ldarg_0);
-                b.Emit(OpCodes.Ldloc, 140);
+                // Hate. Let me tell you how much I've come to HATE this local index since I've been born
+                b.Emit(OpCodes.Ldloc, 138);
                 b.EmitDelegate<Action<Room, WorldCoordinate>>((room, pos) =>
                 {
                     AbstractWorldEntity existingFucker = room.abstractRoom.entities.FirstOrDefault(x => x is AbstractPhysicalObject o && o.type == MSCItemType.EnergyCell);
@@ -604,6 +605,7 @@ namespace BingoMode.BingoChallenges
             }
         }
 
+        // false allows a flower to spawn
         public static void Room_LoadedKarmaFlower(ILContext il)
         {
             ILCursor c = new(il);
@@ -983,38 +985,6 @@ namespace BingoMode.BingoChallenges
             orig.Invoke(self, game, survived, newMalnourished);
         }
 
-        public static void DantesInferno(On.SaveState.orig_SessionEnded orig, SaveState self, RainWorldGame game, bool survived, bool newMalnourished)
-        {
-            if (survived && !newMalnourished)
-            {
-                int revealedChallenges = 0;
-                List<BingoHellChallenge> hellChallenges = [];
-
-                for (int j = 0; j < ExpeditionData.challengeList.Count; j++)
-                {
-                    if (ExpeditionData.challengeList[j] is BingoChallenge g)
-                    {
-                        if (g.RequireSave() && g.revealed)
-                        {
-                            revealedChallenges++;
-                        }
-
-                        if (g is BingoHellChallenge h && !h.hidden && !h.revealed && !h.completed && !h.TeamsCompleted[SteamTest.team] && !h.TeamsFailed[SteamTest.team])
-                        {
-                            hellChallenges.Add(h);
-                        }
-                    }
-                }
-
-                foreach (BingoHellChallenge hell in hellChallenges)
-                {
-                    hell.SessionEnded(revealedChallenges);
-                }
-            }
-
-            orig.Invoke(self, game, survived, newMalnourished);
-        }
-
         public static void ScavengerBomb_Explode(On.ScavengerBomb.orig_Explode orig, ScavengerBomb self, BodyChunk hitChunk)
         {
             orig.Invoke(self, hitChunk);
@@ -1068,9 +1038,6 @@ namespace BingoMode.BingoChallenges
             orig.Invoke(self, game, playerCharacter, timelinePosition, singleRoomWorld, worldName, region, setupValues);
             if (game != null && game.world != null)
             {
-                Plugin.logger.LogInfo("EnterFrom");
-                Plugin.logger.LogInfo(worldName);
-                Plugin.logger.LogInfo(game.world.region?.name);
                 for (int j = 0; j < ExpeditionData.challengeList.Count; j++)
                 {
                     if (ExpeditionData.challengeList[j] is BingoEnterRegionFromChallenge EnterRegionFrom)
@@ -1105,7 +1072,7 @@ namespace BingoMode.BingoChallenges
                 {
                     if (ExpeditionData.challengeList[j] is BingoCreatureGateChallenge creatureGate)
                     {
-                        creatureGate.Gate(worldName);
+                        creatureGate.Gate(game.Players[0].Room.name);
                     }
                 }
             }
@@ -1129,14 +1096,12 @@ namespace BingoMode.BingoChallenges
         public static void WorldLoader_AllRegionsExcept(On.WorldLoader.orig_ctor_RainWorldGame_Name_Timeline_bool_string_Region_SetupValues orig, WorldLoader self, RainWorldGame game, SlugcatStats.Name playerCharacter, SlugcatStats.Timeline timelinePosition, bool singleRoomWorld, string worldName, Region region, RainWorldGame.SetupValues setupValues)
         {
             orig.Invoke(self, game, playerCharacter, timelinePosition, singleRoomWorld, worldName, region, setupValues);
-            if (game != null && game.world != null)
+            // This one doesn't check if the game or world is null because I want to count the starting region (popular demand as well)
+            for (int j = 0; j < ExpeditionData.challengeList.Count; j++)
             {
-                for (int j = 0; j < ExpeditionData.challengeList.Count; j++)
+                if (ExpeditionData.challengeList[j] is BingoAllRegionsExcept allExcept)
                 {
-                    if (ExpeditionData.challengeList[j] is BingoAllRegionsExcept allExcept)
-                    {
-                        allExcept.Entered(worldName);
-                    }
+                    allExcept.Entered(worldName);
                 }
             }
         }
@@ -1216,12 +1181,20 @@ namespace BingoMode.BingoChallenges
             if (c.TryGotoNext(
                 x => x.MatchCallOrCallvirt<RainWorld>("get_ExpeditionMode")
                 ) && c.TryGotoNext(
-                x => x.MatchCallOrCallvirt<SLOrcacleState>("set_neuronsLeft")   
+                x => x.MatchCallOrCallvirt<SLOrcacleState>("set_neuronsLeft")
                 ))
             {
                 c.Emit(OpCodes.Ldarg_0);
                 c.EmitDelegate<Func<int, SaveState, int>>((orig, self) =>
                 {
+                    for (int j = 0; j < ExpeditionData.challengeList.Count; j++)
+                    {
+                        if (ExpeditionData.challengeList[j] is BingoGreenNeuronChallenge c && c.moon.Value && c.CompletedByAny())
+                        {
+                            // MoonDead is not really necessary but it's a good piece of information to expose
+                            BingoData.MoonDead = false;
+                        }
+                    }
                     if (BingoData.MoonDead) orig = 0;
 
                     return orig;
@@ -1555,9 +1528,10 @@ namespace BingoMode.BingoChallenges
         }
 
         public delegate bool orig_PlaceKarmaFlower(Player self);
+        // false prevents a death flower from spawning
         public static bool Player_PlaceKarmaFlower_get(orig_PlaceKarmaFlower orig, Player self)
         {
-            //if (ExpeditionData.challengeList.Any(x => x is BingoKarmaFlowerChallenge c && (c.TeamsCompleted[SteamTest.team] || c.completed))) return orig.Invoke(self);
+            if (ExpeditionData.challengeList.Any(x => x is BingoKarmaFlowerChallenge c && (c.TeamsCompleted[SteamTest.team] || c.completed))) return orig.Invoke(self);
             return false;
         }
 
@@ -1593,7 +1567,7 @@ namespace BingoMode.BingoChallenges
                 ))
             {
                 b.Emit(OpCodes.Ldarg_0);
-                b.Emit(OpCodes.Ldloc, 140);
+                b.Emit(OpCodes.Ldloc, 138);
                 b.EmitDelegate<Action<Room, WorldCoordinate>>((room, pos) =>
                 {
                     AbstractWorldEntity existingFucker = room.abstractRoom.entities.FirstOrDefault(x => x is AbstractPhysicalObject o && o.type == ItemType.NSHSwarmer);
@@ -1644,7 +1618,7 @@ namespace BingoMode.BingoChallenges
                 ))
             {
                 b.Emit(OpCodes.Ldarg_0);
-                b.Emit(OpCodes.Ldloc, 140);
+                b.Emit(OpCodes.Ldloc, 138);
                 b.EmitDelegate<Action<Room, WorldCoordinate>>((room, pos) =>
                 {
                     AbstractWorldEntity existingFucker = room.abstractRoom.entities.FirstOrDefault(x => x is AbstractPhysicalObject o && o.type == MSCItemType.HalcyonPearl);
@@ -1754,7 +1728,7 @@ namespace BingoMode.BingoChallenges
                 ))
             {
                 b.Emit(OpCodes.Ldarg_0);
-                b.Emit(OpCodes.Ldloc, 140);
+                b.Emit(OpCodes.Ldloc, 138);
                 b.EmitDelegate<Action<Room, WorldCoordinate>>((room, pos) =>
                 {
                     AbstractWorldEntity existingFucker = room.abstractRoom.entities.FirstOrDefault(x => x is AbstractPhysicalObject o && o.type == MSCItemType.MoonCloak);
@@ -1871,7 +1845,6 @@ namespace BingoMode.BingoChallenges
         public static void BigNeedleWorm_Swish(On.BigNeedleWorm.orig_Swish orig,  BigNeedleWorm self)
         {
             orig.Invoke(self);
-            Plugin.logger.LogInfo("Swish");
 
             if (self.impaleChunk != null && self.impaleChunk.owner is Player)
             {

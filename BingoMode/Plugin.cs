@@ -21,10 +21,10 @@ namespace BingoMode
     using BingoHUD;
     using System.IO;
 
-    [BepInPlugin("nacu.bingomodebeta", "Bingo Beta", VERSION)]
+    [BepInPlugin("nacu.bingomodebeta", "Bingo", VERSION)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string VERSION = "1.24";
+        public const string VERSION = "1.262";
         public static bool AppliedAlreadyDontDoItAgainPlease;
         public static bool AppliedAlreadyDontDoItAgainPleasePartTwo;
         internal static ManualLogSource logger;
