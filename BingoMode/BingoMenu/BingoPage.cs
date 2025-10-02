@@ -19,6 +19,7 @@ namespace BingoMode.BingoMenu
 
     public class BingoPage : PositionedMenuObject
     {
+        private static Vector2 ScreenOffset => new(Custom.GetScreenOffsets()[0], 0f);
         public ExpeditionMenu expMenu;
 
         #region Title
@@ -104,7 +105,7 @@ namespace BingoMode.BingoMenu
             BingoData.BingoMode = false;
             BingoData.TeamsInBingo = [0];
 
-            Vector2 topCenter = new(menu.manager.rainWorld.screenSize.x / 2f, menu.manager.rainWorld.screenSize.y - TITLE_MARGIN);
+            Vector2 topCenter = ScreenOffset + new Vector2(menu.manager.rainWorld.screenSize.x / 2f, menu.manager.rainWorld.screenSize.y - TITLE_MARGIN);
             title = new("bingotitle")
             {
                 anchorX = 0.5f,
@@ -295,7 +296,7 @@ namespace BingoMode.BingoMenu
         {
             base.GrafUpdate(timeStacker);
 
-            title.SetPosition(DrawPos(timeStacker) + new Vector2(menu.manager.rainWorld.screenSize.x / 2f, menu.manager.rainWorld.screenSize.y - TITLE_MARGIN));
+            title.SetPosition(ScreenOffset + DrawPos(timeStacker) + new Vector2(menu.manager.rainWorld.screenSize.x / 2f, menu.manager.rainWorld.screenSize.y - TITLE_MARGIN));
 
             if (eggButton != null && expMenu.challengeSelect != null)
             {

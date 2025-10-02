@@ -209,7 +209,10 @@ namespace BingoMode.BingoChallenges
             {
                 base.Redraw(shouldForceDirty, shouldUpdateDepth);
                 for (int i = 0; i < subNodes.Count; i++)
+                {
                     subNodes[i].SetPosition(relPos[i] + GetPosition());
+                    subNodes[i].alpha = alpha;
+                }
             }
 
             public override void HandleAddedToContainer(FContainer container)
